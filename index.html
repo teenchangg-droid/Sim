@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>수능 기출 수록 페이지 검색기</title>
+<style>
+:root{--bg:#f5f5f7;--line:#e5e7eb;--text:#111827}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:760px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;align-items:center}
+input,select,button{font:inherit}.search,input,select{width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.item{padding:18px 0;border-bottom:1px solid var(--line);position:relative}
+.head{display:flex;justify-content:space-between}.kw{color:#6b7280;font-size:14px;margin-top:4px}.row{margin-top:12px;line-height:1.8}.lab{display:inline-block;width:42px;font-weight:700}
+.admin{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#fff}.fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border:none;border-radius:50%;background:#111;color:#fff;font-size:34px;display:none}
+.menu{display:none;position:absolute;right:0;top:36px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.menu button{display:block;width:100%;padding:10px 16px;border:none;background:#fff;text-align:left}.menu button:hover{background:#f3f4f6}
+.more{border:none;background:none;font-size:22px}.modal{display:none;position:fixed;inset:0;background:#0005;align-items:center;justify-content:center;padding:20px}.panel{background:#fff;width:min(560px,100%);border-radius:22px;padding:22px;max-height:90vh;overflow:auto}
+.sec{margin:18px 0}.sec h3{margin:0 0 10px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btns{display:flex;gap:8px;margin-top:18px}.b{flex:1;padding:14px;border:none;border-radius:14px}.black{background:#111;color:#fff}.gray{background:#f3f4f6}.books .r{display:flex;gap:8px;margin-bottom:8px}.books input{flex:1}
+@media(max-width:560px){.grid,.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top"><h2>수능 기출 수록 페이지</h2><button id="adminBtn" class="admin">관리자</button></div>
+<div style="display:flex;flex-direction:column;gap:10px;margin:18px 0 26px">
+<input id="search" class="search" placeholder="키워드 검색">
+<div class="grid">
+<select id="yf"><option>ALL</option></select>
+<select id="mf"><option>ALL</option><option>3월</option><option>6월</option><option>9월</option><option>수능</option></select>
+<select id="tf"><option>ALL</option><option>독서</option><option>문학</option></select>
+</div></div>
+<div id="list"></div></div>
+<button id="fab" class="fab">＋</button>
+
+<div id="login" class="modal"><div class="panel">
+<h3>관리자 로그인</h3><input id="pw" placeholder="비밀번호" type="password">
+<p id="err" style="color:#dc2626;display:none">비밀번호가 올바르지 않습니다.</p>
+<div class="btns"><button class="b gray" onclick="cl('login')">취소</button><button class="b black" onclick="login()">확인</button></div>
+</div></div>
+
+<div id="edit" class="modal"><div class="panel">
+<h3 id="ttl">문제 추가</h3>
+<div class="sec"><h3>기본 정보</h3><div class="two">
+<input id="year" type="number" placeholder="학년도">
+<select id="month"></select><select id="type"><option>독서</option><option>문학</option></select>
+<input id="keyword" placeholder="키워드"></div></div>
+<div class="sec"><h3>문제 수록</h3>
+<select id="pb"></select><div class="two" style="margin-top:8px"><input id="pp" placeholder="페이지"><input id="pn" placeholder="13~17"></div></div>
+<div class="sec"><h3>해설 수록</h3>
+<select id="sb"></select><input id="sp" placeholder="페이지" style="margin-top:8px"></div>
+<div id="bookSec" class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><h3>교재 목록 관리</h3><button onclick="addBook()">＋</button></div><div id="bookList" class="books"></div></div>
+<div class="btns"><button class="b gray" onclick="cl('edit')">취소</button><button class="b black" onclick="save()">저장</button></div>
+</div></div>
+
+<script>
+const PASS="09060909",DK="epi_data",BK="epi_books";
+const def=["EPI Vol.1 문제편","EPI Vol.1 해설편","EPI Vol.2 문제편","EPI Vol.2 해설편","EPI Vol.3 문제편","EPI Vol.3 해설편","EPI Vol.4 문제편","EPI Vol.4 해설편","EPI Vol.5 문제편","EPI Vol.5 해설편"];
+let books=JSON.parse(localStorage.getItem(BK)||"null")||def;
+let data=JSON.parse(localStorage.getItem(DK)||"[]"),edit=-1;
+const mons=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","수능"];
+month.innerHTML=mons.map(v=>`<option>${v}</option>`).join("");
+function admin(){return sessionStorage.getItem("admin")=="1"};function cl(id){document.getElementById(id).style.display="none"};function op(id){document.getElementById(id).style.display="flex"}
+function fillBooks(){pb.innerHTML=books.map(v=>`<option>${v}</option>`).join("");sb.innerHTML=pb.innerHTML;renderBookList()}
+pb.onchange=()=>{const t=pb.value.replace("문제편","해설편");if(books.includes(t))sb.value=t}
+function renderBookList(){bookList.innerHTML="";books.forEach((b,i)=>{const d=document.createElement("div");d.className="r";d.innerHTML=`<input value="${b}"><button>삭제</button>`;d.querySelector("input").onchange=e=>{books[i]=e.target.value;syncBooks()};d.querySelector("button").onclick=()=>{books.splice(i,1);syncBooks()};bookList.appendChild(d)})}
+function addBook(){books.push("새 교재");syncBooks()}function syncBooks(){localStorage.setItem(BK,JSON.stringify(books));fillBooks()}
+function login(){if(pw.value===PASS){sessionStorage.setItem("admin","1");cl("login");ui()}else err.style.display="block"}
+adminBtn.onclick=()=>{if(admin()){sessionStorage.removeItem("admin");ui()}else op("login")}
+fab.onclick=()=>{edit=-1;ttl.textContent="문제 추가";year.value="";month.value="9월";type.value="독서";keyword.value="";pb.selectedIndex=0;pb.onchange();pp.value=pn.value=sp.value="";op("edit")}
+function save(){const o={year:+year.value,month:month.value,type:type.value,keyword:keyword.value,problemBook:pb.value,problemPage:pp.value,problemNo:pn.value,solutionBook:sb.value,solutionPage:sp.value};if(edit<0)data.push(o);else data[edit]=o;localStorage.setItem(DK,JSON.stringify(data));cl("edit");render()}
+function bo(v){const m=v.match(/Vol\.(\d)/);return (+m[1])*10+(v.includes("해설")?1:0)}
+function render(){const k=search.value.toLowerCase();const arr=data.filter(d=>(d.keyword||"").toLowerCase().includes(k)&&(yf.value=="ALL"||String(d.year)==yf.value)&&(mf.value=="ALL"||d.month==mf.value)&&(tf.value=="ALL"||d.type==tf.value)).sort((a,b)=>bo(a.problemBook)-bo(b.problemBook)||(+a.problemPage)-(+b.problemPage));list.innerHTML="";arr.forEach(it=>{const idx=data.indexOf(it);const e=document.createElement("div");e.className="item";e.innerHTML=`<div class=head><div><b>${it.year}학년도 ${it.month} · ${it.type}</b><div class=kw>${it.keyword}</div></div>${admin()?`<div style=position:relative><button class=more>⋮</button><div class=menu><button class=ed>수정</button><button class=de style="color:#dc2626">삭제</button></div></div>`:""}</div><div class=row><div><span class=lab>문제</span>${it.problemBook} p.${it.problemPage} No.${it.problemNo}</div><div><span class=lab>해설</span>${it.solutionBook} p.${it.solutionPage}</div></div>`;if(admin()){const m=e.querySelector(".menu");e.querySelector(".more").onclick=()=>m.style.display=m.style.display=="block"?"none":"block";e.querySelector(".ed").onclick=()=>{edit=idx;ttl.textContent="데이터 수정";Object.assign({},{}) ;year.value=it.year;month.value=it.month;type.value=it.type;keyword.value=it.keyword;pb.value=it.problemBook;sb.value=it.solutionBook;pp.value=it.problemPage;pn.value=it.problemNo;sp.value=it.solutionPage;op("edit")};e.querySelector(".de").onclick=()=>{if(confirm("삭제할까요?")){data.splice(idx,1);localStorage.setItem(DK,JSON.stringify(data));render()}}}list.appendChild(e)});const ys=[...new Set(data.map(d=>d.year))].sort((a,b)=>b-a);yf.innerHTML="<option>ALL</option>"+ys.map(v=>`<option>${v}</option>`).join("")}
+function ui(){fab.style.display=admin()?"block":"none";bookSec.style.display=admin()?"block":"none";adminBtn.textContent=admin()?"로그아웃":"관리자";render()}
+["search","yf","mf","tf"].forEach(id=>document.getElementById(id).oninput=render);fillBooks();ui();
+</script>
+</body>
+</html>
